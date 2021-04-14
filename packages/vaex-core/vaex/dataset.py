@@ -548,6 +548,24 @@ class DatasetRenamed(DatasetDecorator):
         self._ids = frozendict({renaming.get(name, name): ar for name, ar in original._ids.items()})
         self._set_row_count()
 
+    def renamed(self, renaming):
+        # # {'a': 'x', 'b': 'y'} and {'x': 'a', 'b': 'z', 'c', 'q'} -> {'b': 'z', 'c': 'q'}
+        resulting = {}
+        renaming = renaming.copy()  # we'll modify in place
+        for old, new in self.renaming.items():
+            if new in renaming:
+                if old == renaming[new]:
+                    pass # e.g.  x->a->x
+                else:
+                    resulting[old] = renaming[new]
+                del renaming[new]  # we already covered this
+            else:
+                # e.g. x->a->a
+                resulting[old] = new
+        # e.g. x->x->a
+        resulting.update(renaming)
+        return DatasetRenamed(self.original, resulting)
+
     @property
     def _fingerprint(self):
         id = vaex.cache.fingerprint(self.original.id, self.renaming)
